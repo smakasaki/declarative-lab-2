@@ -1,14 +1,13 @@
+import os
 import requests
 
-url = 'https://www.gismeteo.ru/diary/4976/2023/9/'
-
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-}
-
-try:
-    response = requests.get(url, headers=headers)
-    print('Status code: ', response.status_code)
-    print('Text: ', response.text[:50])
-except requests.exceptions.RequestException as e:
-    print(f'Request failed: {str(e)}')
+def save_review(review, review_type, file_number):
+    folder_path = f"dataset/{review_type}"
+    file_name = str(file_number).zfill(4)  # Добавление ведущих нулей
+    file_path = f"{folder_path}/{file_name}.txt"
+    
+    os.makedirs(folder_path, exist_ok=True)
+    
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(review['title'] + "\n")
+        file.write(review['description'])
