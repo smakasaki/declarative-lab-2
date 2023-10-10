@@ -1,14 +1,67 @@
+import os
 import requests
+import time
+import json
 
-url = 'https://www.gismeteo.ru/diary/4976/2023/9/'
-
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+API_KEY = '9509ce90-8631-4769-b44e-ede406848cdb'
+HEADERS = {
+    'Content-Type': 'application/json',
+    'X-API-KEY': API_KEY,
 }
 
-try:
-    response = requests.get(url, headers=headers)
-    print('Status code: ', response.status_code)
-    print('Text: ', response.text[:50])
-except requests.exceptions.RequestException as e:
-    print(f'Request failed: {str(e)}')
+def get_last_saved_file_number(path):
+    try:
+        files = os.listdir(path)
+        if not files:
+            return -1
+        max_number = max(int(f.rstrip('.txt')) for f in files)
+        return max_number
+    except FileNotFoundError:
+        return -1
+
+def save_review(review, review_type, file_number):
+    folder_path = f"dataset/{review_type}"
+    file_name = str(file_number).zfill(4)  # Добавление ведущих нулей
+    file_path = f"{folder_path}/{file_name}.txt"
+    
+    os.makedirs(folder_path, exist_ok=True)
+    author_name = review['author'] if review['author'] is not None else "Anonymous"
+    
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(author_name + "\n")
+        file.write(review['description'])
+
+def get_reviews(movie_id, review_type, start_number):
+    page = 1
+    saved_reviews = start_number + 1
+    
+    while True:
+        url = f"https://kinopoiskapiunofficial.tech/api/v2.2/films/{movie_id}/reviews?page={page}&order=DATE_DESC"
+        response = requests.get(url, headers=HEADERS)
+        time.sleep(0.1)  # Соблюдение ограничения по скорости запросов
+        
+        if response.status_code != 200:
+            print(f"Failed to get data: {response.status_code}")
+            break
+        
+        data = response.json()
+        
+        for item in data['items']:
+            if item['type'] == review_type.upper():
+                save_review(item, review_type.lower(), saved_reviews)
+                saved_reviews += 1
+        
+        page += 1
+        if page > data['totalPages']:
+            break
+
+def main():
+    movie_ids = ['435', '195334', '535341']
+    for movie_id in movie_ids:
+        for review_type in ['positive', 'negative']:
+            folder_path = f"dataset/{review_type}"
+            last_saved_number = get_last_saved_file_number(folder_path)
+            get_reviews(movie_id, review_type, last_saved_number)
+
+if __name__ == "__main__":
+    main()
