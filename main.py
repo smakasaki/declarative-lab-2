@@ -19,7 +19,7 @@ def get_last_saved_file_number(path):
     except FileNotFoundError:
         return -1
 
-def save_review(review, review_type, file_number):
+def save_review(review, review_type, file_number, film_name):
     folder_path = f"dataset/{review_type}"
     file_name = str(file_number).zfill(4)  # Добавление ведущих нулей
     file_path = f"{folder_path}/{file_name}.txt"
@@ -28,10 +28,11 @@ def save_review(review, review_type, file_number):
     author_name = review['author'] if review['author'] is not None else "Anonymous"
     
     with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(film_name + "\n")
         file.write(author_name + "\n")
         file.write(review['description'])
 
-def get_reviews(movie_id, review_type, start_number):
+def get_reviews(movie_id, review_type, start_number, film_name):
     page = 1
     saved_reviews = start_number + 1
     
@@ -48,7 +49,7 @@ def get_reviews(movie_id, review_type, start_number):
         
         for item in data['items']:
             if item['type'] == review_type.upper():
-                save_review(item, review_type.lower(), saved_reviews)
+                save_review(item, review_type.lower(), saved_reviews, film_name)
                 saved_reviews += 1
         
         page += 1
@@ -58,10 +59,15 @@ def get_reviews(movie_id, review_type, start_number):
 def main():
     movie_ids = ['435', '195334', '535341']
     for movie_id in movie_ids:
+        url = f"https://kinopoiskapiunofficial.tech/api/v2.2/films/{movie_id}"
+        response = requests.get(url, headers=HEADERS)
+        data = response.json()
+        film_name = data["nameRu"]
+
         for review_type in ['positive', 'negative']:
             folder_path = f"dataset/{review_type}"
             last_saved_number = get_last_saved_file_number(folder_path)
-            get_reviews(movie_id, review_type, last_saved_number)
+            get_reviews(movie_id, review_type, last_saved_number, film_name)
 
 if __name__ == "__main__":
     main()
